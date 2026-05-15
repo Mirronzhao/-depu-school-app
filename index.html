@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DEPU School - English Oral Practice</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh; color: #e0e0e0;
+  }
+  .app-container {
+    max-width: 800px; margin: 0 auto; padding: 20px;
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+  header {
+    text-align: center; padding: 30px 0 20px;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    margin-bottom: 20px;
+  }
+  header h1 {
+    font-size: 1.8em; color: #e94560;
+    text-shadow: 0 0 20px rgba(233,69,96,0.3);
+  }
+  header p { color: #a0a0b0; margin-top: 8px; font-size: 0.95em; }
+  .progress-bar {
+    background: rgba(255,255,255,0.1); border-radius: 10px;
+    height: 8px; margin: 15px 0; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, #e94560, #ff6b6b);
+    border-radius: 10px; transition: width 0.5s ease;
+  }
+  .progress-text { font-size: 0.85em; color: #a0a0b0; text-align: center; margin-bottom: 15px; }
+  .chat-area {
+    flex: 1; overflow-y: auto; padding: 15px;
+    background: rgba(255,255,255,0.05); border-radius: 15px;
+    margin-bottom: 15px; min-height: 300px; max-height: 500px;
+  }
+  .message {
+    margin-bottom: 15px; padding: 12px 18px;
+    border-radius: 15px; max-width: 85%;
+    line-height: 1.6; animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .message.app {
+    background: linear-gradient(135deg, #0f3460, #16213e);
+    border: 1px solid rgba(233,69,96,0.3);
+    margin-right: auto;
+  }
+  .message.user {
+    background: linear-gradient(135deg, #533483, #7b2d8e);
+    margin-left: auto;
+  }
+  .message.system {
+    background: rgba(233,69,96,0.15);
+    border: 1px solid rgba(233,69,96,0.4);
+    margin: 0 auto; text-align: center; max-width: 95%;
+  }
+  .message.reference {
+    background: rgba(46,204,113,0.15);
+    border: 1px solid rgba(46,204,113,0.4);
+    margin: 0 auto; max-width: 95%;
+  }
+  .score-display {
+    display: flex; gap: 12px; justify-content: center;
+    flex-wrap: wrap; margin: 10px 0;
+  }
+  .score-item {
+    background: rgba(255,255,255,0.08); border-radius: 12px;
+    padding: 12px 18px; text-align: center; min-width: 100px;
+  }
+  .score-item .label { font-size: 0.8em; color: #a0a0b0; margin-bottom: 5px; }
+  .score-item .value { font-size: 1.8em; font-weight: bold; }
+  .score-item .value.good { color: #2ecc71; }
+  .score-item .value.ok { color: #f39c12; }
+  .score-item .value.bad { color: #e94560; }
+  .score-total {
+    text-align: center; font-size: 1.3em; font-weight: bold;
+    margin: 10px 0; padding: 10px;
+    border-radius: 10px;
+  }
+  .score-total.pass { color: #2ecc71; background: rgba(46,204,113,0.15); }
+  .score-total.fail { color: #e94560; background: rgba(233,69,96,0.15); }
+  .controls {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    justify-content: center; padding: 15px 0;
+  }
+  button {
+    padding: 12px 24px; border: none; border-radius: 25px;
+    font-size: 1em; cursor: pointer; transition: all 0.3s ease;
+    font-weight: 600; display: flex; align-items: center; gap: 8px;
+  }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-record {
+    background: linear-gradient(135deg, #e94560, #ff6b6b);
+    color: white; box-shadow: 0 4px 15px rgba(233,69,96,0.4);
+  }
+  .btn-record:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(233,69,96,0.6); }
+  .btn-record.recording {
+    background: linear-gradient(135deg, #ff0000, #ff4444);
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,0,0,0.4); } 50% { box-shadow: 0 0 0 15px rgba(255,0,0,0); } }
+  .btn-reference {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white; box-shadow: 0 4px 15px rgba(46,204,113,0.4);
+  }
+  .btn-reference:hover:not(:disabled) { transform: translateY(-2px); }
+  .btn-next {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white; box-shadow: 0 4px 15px rgba(52,152,219,0.4);
+  }
+  .btn-next:hover:not(:disabled) { transform: translateY(-2px); }
+  .btn-retry {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white; box-shadow: 0 4px 15px rgba(243,156,18,0.4);
+  }
+  .btn-retry:hover:not(:disabled) { transform: translateY(-2px); }
+  .btn-speak {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: white; box-shadow: 0 4px 15px rgba(155,89,182,0.4);
+  }
+  .btn-speak:hover:not(:disabled) { transform: translateY(-2px); }
+  .btn-playback {
+    background: linear-gradient(135deg, #1abc9c, #16a085);
+    color: white; box-shadow: 0 4px 15px rgba(26,188,156,0.4);
+  }
+  .btn-playback:hover:not(:disabled) { transform: translateY(-2px); }
+  .btn-start {
+    background: linear-gradient(135deg, #e94560, #ff6b6b);
+    color: white; font-size: 1.2em; padding: 18px 40px;
+    box-shadow: 0 4px 20px rgba(233,69,96,0.5);
+  }
+  .btn-start:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(233,69,96,0.7); }
+  .welcome { text-align: center; padding: 40px 20px; }
+  .welcome h2 { font-size: 1.5em; color: #e94560; margin-bottom: 20px; }
+  .welcome ul { text-align: left; display: inline-block; margin: 20px 0; line-height: 2; }
+  .welcome li { list-style: none; padding-left: 20px; position: relative; }
+  .welcome li::before { content: "▸"; position: absolute; left: 0; color: #e94560; }
+  .recording-indicator {
+    display: none; text-align: center; padding: 10px;
+    color: #ff4444; font-weight: bold;
+  }
+  .recording-indicator.active { display: block; }
+  .live-transcript {
+    min-height: 40px; padding: 12px 18px;
+    background: rgba(155,89,182,0.1); border: 1px solid rgba(155,89,182,0.3);
+    border-radius: 10px; margin-bottom: 10px;
+    color: #c0a0e0; font-style: italic; display: none;
+  }
+  .live-transcript.active { display: block; }
+  .text-input-area {
+    display: none; padding: 10px 0;
+  }
+  .text-input-area.visible { display: flex; gap: 8px; }
+  .text-input-area input {
+    flex: 1; padding: 12px 16px; border-radius: 25px;
+    border: 1px solid rgba(233,69,96,0.4); background: rgba(255,255,255,0.08);
+    color: #e0e0e0; font-size: 1em; outline: none;
+  }
+  .text-input-area input:focus { border-color: #e94560; background: rgba(255,255,255,0.12); }
+  .text-input-area input::placeholder { color: #666; }
+  .btn-submit {
+    background: linear-gradient(135deg, #e94560, #ff6b6b);
+    color: white; border: none; border-radius: 25px;
+    padding: 12px 20px; cursor: pointer; font-weight: 600;
+  }
+  .btn-submit:hover { transform: translateY(-1px); }
+  .mode-toggle {
+    text-align: center; margin-bottom: 8px;
+  }
+  .mode-toggle a {
+    color: #a0a0b0; font-size: 0.85em; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .mode-toggle a:hover { color: #e94560; }
+  .result-area { display: none; }
+  .result-area.visible { display: block; }
+  .completion {
+    text-align: center; padding: 40px 20px;
+    animation: fadeIn 0.5s ease;
+  }
+  .completion h2 { color: #2ecc71; font-size: 1.8em; margin-bottom: 15px; }
+  .completion .final-score {
+    font-size: 3em; font-weight: bold; color: #e94560;
+    margin: 20px 0; text-shadow: 0 0 30px rgba(233,69,96,0.5);
+  }
+  .tips { font-size: 0.85em; color: #a0a0b0; margin-top: 10px; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="app-container">
+  <header>
+    <h1>DEPU Foreign Language School</h1>
+    <p>English Oral Practice - School Introduction</p>
+  </header>
+
+  <div id="welcomeScreen" class="welcome">
+    <h2>Welcome to English Oral Practice!</h2>
+    <p>Practice speaking about Chongqing DEPU Foreign Language School</p>
+    <ul>
+      <li>The app will ask you questions in English</li>
+      <li>Answer each question by speaking in English</li>
+      <li>You will be scored on: Accuracy, Pronunciation & Fluency</li>
+      <li>Score 60+ to advance to the next question</li>
+      <li>Request a reference answer if you need help</li>
+      <li>You can re-answer after seeing the reference</li>
+    </ul>
+    <br>
+    <button class="btn-start" onclick="startApp()">Start Practice</button>
+    <div class="tips">Please use Chrome browser for best speech recognition support</div>
+  </div>
+
+  <div id="practiceScreen" style="display:none">
+    <div class="progress-text" id="progressText">Question 1 / 10</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+    <div class="chat-area" id="chatArea"></div>
+
+    <div class="live-transcript" id="liveTranscript"></div>
+    <div class="recording-indicator" id="recordingIndicator">
+      🎙️ Listening... Speak now!
+    </div>
+
+    <div class="text-input-area" id="textInputArea">
+      <input type="text" id="textInput" placeholder="Type your answer in English..." onkeydown="if(event.key==='Enter')submitTextAnswer()">
+      <button class="btn-submit" onclick="submitTextAnswer()">Submit</button>
+    </div>
+
+    <div class="mode-toggle">
+      <a id="modeToggle" onclick="toggleInputMode()">Switch to text input</a>
+    </div>
+
+    <div class="controls" id="controls">
+      <button class="btn-speak" id="btnSpeak" onclick="speakQuestion()">🔊 Listen</button>
+      <button class="btn-record" id="btnRecord" onclick="toggleRecording()">🎙️ Answer</button>
+      <button class="btn-playback" id="btnPlayback" onclick="playbackRecording()" style="display:none">🎵 Hear My Answer</button>
+      <button class="btn-reference" id="btnReference" onclick="showReference()" disabled>📄 Reference Answer</button>
+      <button class="btn-retry" id="btnRetry" onclick="retryAnswer()" style="display:none">🔄 Re-answer</button>
+      <button class="btn-next" id="btnNext" onclick="nextQuestion()" style="display:none">➡️ Next Question</button>
+    </div>
+  </div>
+
+  <div id="completionScreen" style="display:none" class="completion">
+    <h2>Congratulations!</h2>
+    <p>You have completed all questions!</p>
+    <div class="final-score" id="finalScore"></div>
+    <p id="finalMessage"></p>
+    <br>
+    <button class="btn-start" onclick="startApp()">Practice Again</button>
+  </div>
+</div>
+
+<script>
+// ===== QUESTION DATA =====
+const questions = [
+  {
+    id: 1,
+    question: "What is Chongqing DEPU Foreign Language School? Please describe the school's type, investment, and the education levels it covers.",
+    referenceAnswer: "Chongqing DEPU Foreign Language School is fully funded by DEPU Education with an investment of nearly 800 million yuan. It is a 12-year integrated international school that encompasses primary, middle, and high school education.",
+    keywords: ["DEPU Education", "800 million", "12-year", "integrated international school", "primary", "middle", "high school"]
+  },
+  {
+    id: 2,
+    question: "How large is the DEPU school campus? Please mention the total area, construction area, and how the campuses are organized.",
+    referenceAnswer: "The school covers a total area of 98.7 acres and has a total construction area of nearly 120,000 square meters. It is divided into two adjacent independent campuses — the middle school and the primary school, equipped with a large number of sports venues and art function classrooms.",
+    keywords: ["98.7 acres", "120,000 square meters", "two", "independent campuses", "middle school", "primary school", "sports venues", "art"]
+  },
+  {
+    id: 3,
+    question: "When did DEPU start? And how many students and faculty members does it have as of June 2024?",
+    referenceAnswer: "DEPU Foreign Language School started in September 2015. As of June 2024, DEPU has over 2,300 students enrolled, including approximately 100 international students, reaching the school's maximum student capacity. And there are 480 faculty members in school.",
+    keywords: ["September 2015", "2,300 students", "100 international students", "maximum capacity", "480 faculty members"]
+  },
+  {
+    id: 4,
+    question: "What is DEPU's motto? Where does it come from and what does it mean?",
+    referenceAnswer: "DEPU's motto is 'Cultivated in the world, character will become universal.' This phrase is derived from the Tao Te Ching, one of the most important traditional philosophical works of China by Lao Tzu. DEPU hopes that students can inherit the essence of traditional Chinese philosophical thought and possess a lofty sentiment towards their country and the world.",
+    keywords: ["Cultivated in the world", "character will become universal", "Tao Te Ching", "Lao Tzu", "traditional Chinese philosophical", "lofty sentiment"]
+  },
+  {
+    id: 5,
+    question: "What is DEPU's mission?",
+    referenceAnswer: "DEPU's mission is: With a deep understanding of the anxiety Chinese parents have about their children's education and the challenges students will meet in the fast-changing and uncertain future, we are committed to returning education to its essence, innovating educational philosophy, practice and management, and developing a 12-year holistic curriculum that integrates the East and the West. We aim at cultivating healthy and happy students, innovators and creators with cross-cultural communication skills and understanding.",
+    keywords: ["returning education to its essence", "innovating", "holistic curriculum", "integrates the East and the West", "healthy and happy", "innovators", "creators", "cross-cultural communication"]
+  },
+  {
+    id: 6,
+    question: "What is DEPU's vision and educational goal?",
+    referenceAnswer: "DEPU's Vision is: To become the leader as well as a standard setter of international schools in the era of 3.0. DEPU's Educational Goal is: To cultivate healthy and happy students, innovators and creators with cross-cultural communication skills and understanding.",
+    keywords: ["leader", "standard setter", "era of 3.0", "cultivate", "healthy and happy", "innovators", "creators", "cross-cultural communication"]
+  },
+  {
+    id: 7,
+    question: "How many DEPU graduates have been accepted into top global universities? Please name some universities in the UK, the US, and other countries.",
+    referenceAnswer: "Over the past nine years, there are more than 500 DEPU graduates who have been accepted into top global universities. In the UK: University of Oxford, University of Cambridge, Imperial College London, London School of Economics, University College London. In the US: University of Chicago, Columbia University, UCLA, New York University. In Canada: University of Toronto, McGill University. In Australia: Australian National University, University of Sydney. In Singapore: National University of Singapore. In Hong Kong: University of Hong Kong.",
+    keywords: ["500", "graduates", "Oxford", "Cambridge", "Imperial College", "Columbia", "University of Toronto", "Australian National University", "National University of Singapore", "University of Hong Kong"]
+  },
+  {
+    id: 8,
+    question: "What were DEPU's 2025 admission statistics for QS World University Rankings?",
+    referenceAnswer: "In 2025, 33% of DEPU's graduates were admitted to universities ranked in the top 10 in the QS World University Rankings, 91% were admitted to universities ranked in the top 50, and 99% were admitted to universities ranked in the top 100.",
+    keywords: ["33%", "top 10", "91%", "top 50", "99%", "top 100", "QS World University Rankings"]
+  },
+  {
+    id: 9,
+    question: "What authoritative certifications has DEPU received? Please name at least four of them.",
+    referenceAnswer: "DEPU has received certifications from numerous authoritative third-party academic institutions, including: Cognia Accredited School, College Board AP Accredited School, Cambridge Assessment International Education accredited 'Chongqing Cambridge International Centre', Edexcel Academic Qualification and Examination Centre, IBO Accredited IBPYP Candidate School, and Cambridge International Teacher Professional Development Centre.",
+    keywords: ["Cognia", "College Board AP", "Cambridge Assessment", "Edexcel", "IBO", "IBPYP", "Cambridge International Teacher"]
+  },
+  {
+    id: 10,
+    question: "Who is the principal of DEPU? What recognition has the principal received? And what is the 'CHINA IV LEAGUE'?",
+    referenceAnswer: "Dr. Xu Lingke is the principal of DEPU. He has been elected as one of China's top ten most influential international school principals and has been appointed as a member of the Chinese International School Expert Lecturer Group. The 'CHINA IV LEAGUE' is the first international school alliance in China established under DEPU's leadership. Its members include Beijing International Bilingual Academy, Shanghai United International School Qingpu Campus, and Tsinglan School.",
+    keywords: ["Dr. Xu Lingke", "principal", "top ten most influential", "CHINA IV LEAGUE", "first international school alliance", "Beijing International Bilingual Academy", "Shanghai United International School", "Tsinglan School"]
+  }
+];
+
+// ===== APP STATE =====
+let currentQuestion = 0;
+let scores = [];
+let recognition = null;
+let isRecording = false;
+let currentTranscript = '';
+let currentConfidenceScores = [];
+let lastScore = 0;
+let hasShownReference = false;
+let hasAnswered = false;
+let synth = window.speechSynthesis;
+let manualStop = false; // true when user clicked Stop
+let inputMode = 'voice'; // 'voice' or 'text'
+let networkRetryCount = 0;
+const MAX_NETWORK_RETRIES = 3;
+let speechRecognitionAvailable = false;
+
+// ===== AUDIO RECORDING STATE =====
+let mediaRecorder = null;
+let audioChunks = [];
+let lastRecordingURL = null;
+let lastRecordingBlob = null;
+let playbackAudio = null;
+
+// ===== PRE-WARM SPEECH RECOGNITION =====
+// Chrome's Web Speech API needs an initial connection to Google servers.
+// We pre-warm it on page load so it's ready when the user clicks Answer.
+function prewarmSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    speechRecognitionAvailable = false;
+    return;
+  }
+  speechRecognitionAvailable = true;
+  try {
+    const warmup = new SpeechRecognition();
+    warmup.lang = 'en-US';
+    warmup.continuous = false;
+    warmup.interimResults = false;
+    warmup.onresult = () => {};
+    warmup.onerror = () => {};
+    warmup.onend = () => {};
+    warmup.start();
+    // Stop it immediately — we just want to trigger the network connection
+    setTimeout(() => { try { warmup.stop(); } catch(e) {} }, 200);
+  } catch(e) {}
+}
+// Pre-warm on page load
+prewarmSpeechRecognition();
+
+// ===== INITIALIZATION =====
+function startApp() {
+  currentQuestion = 0;
+  scores = [];
+  inputMode = 'voice';
+  document.getElementById('welcomeScreen').style.display = 'none';
+  document.getElementById('completionScreen').style.display = 'none';
+  document.getElementById('practiceScreen').style.display = 'block';
+  updateInputModeUI();
+  loadQuestion();
+  // Pre-warm again when starting
+  prewarmSpeechRecognition();
+}
+
+function loadQuestion() {
+  hasAnswered = false;
+  hasShownReference = false;
+  lastScore = 0;
+  currentTranscript = '';
+
+  const q = questions[currentQuestion];
+  document.getElementById('progressText').textContent = `Question ${currentQuestion + 1} / ${questions.length}`;
+  document.getElementById('progressFill').style.width = `${((currentQuestion) / questions.length) * 100}%`;
+
+  const chatArea = document.getElementById('chatArea');
+  chatArea.innerHTML = '';
+
+  addMessage('app', `<strong>Question ${currentQuestion + 1}:</strong> ${q.question}`);
+
+  // Reset buttons
+  document.getElementById('btnRecord').disabled = false;
+  document.getElementById('btnRecord').textContent = '🎙️ Answer';
+  document.getElementById('btnRecord').className = 'btn-record';
+  document.getElementById('btnReference').disabled = true;
+  document.getElementById('btnRetry').style.display = 'none';
+  document.getElementById('btnNext').style.display = 'none';
+  document.getElementById('btnPlayback').style.display = 'none';
+  document.getElementById('recordingIndicator').className = 'recording-indicator';
+  document.getElementById('liveTranscript').className = 'live-transcript';
+  document.getElementById('liveTranscript').textContent = '';
+  document.getElementById('textInput').value = '';
+  networkRetryCount = 0;
+  cleanupRecording();
+
+  // Auto-speak the question
+  setTimeout(() => speakQuestion(), 500);
+}
+
+// ===== SPEECH SYNTHESIS (TTS) =====
+function speakQuestion() {
+  if (!synth) return;
+  synth.cancel();
+  const q = questions[currentQuestion];
+  const utterance = new SpeechSynthesisUtterance(q.question);
+  utterance.lang = 'en-US';
+  utterance.rate = 0.9;
+  utterance.pitch = 1;
+  // Try to find an English voice
+  const voices = synth.getVoices();
+  const enVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'))
+    || voices.find(v => v.lang.startsWith('en-US'))
+    || voices.find(v => v.lang.startsWith('en'));
+  if (enVoice) utterance.voice = enVoice;
+  synth.speak(utterance);
+}
+
+// ===== SPEECH RECOGNITION =====
+function toggleRecording() {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+function startRecording() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    addMessage('system', 'Your browser does not support speech recognition. Please use Chrome browser, or switch to text input mode.');
+    return;
+  }
+
+  // Reset state
+  currentTranscript = '';
+  currentConfidenceScores = [];
+  manualStop = false;
+  networkRetryCount = 0;
+  audioChunks = [];
+
+  // Start audio recording via MediaRecorder
+  startAudioRecording();
+
+  createRecognition();
+}
+
+function createRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  // Accumulate all final results + show interim in real time
+  recognition.onresult = (event) => {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const result = event.results[i];
+      const transcript = result[0].transcript;
+      if (result.isFinal) {
+        currentTranscript += transcript + ' ';
+        currentConfidenceScores.push(result[0].confidence);
+      } else {
+        interim += transcript;
+      }
+    }
+    // Show live transcript to user
+    const liveEl = document.getElementById('liveTranscript');
+    liveEl.textContent = '🎤 ' + currentTranscript + interim;
+    liveEl.className = 'live-transcript active';
+    // Reset retry count on successful recognition
+    networkRetryCount = 0;
+  };
+
+  recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+    if (event.error === 'not-allowed') {
+      addMessage('system', 'Microphone access denied. Please allow microphone access and try again, or switch to text input mode.');
+      isRecording = false;
+      resetRecordingUI();
+    } else if (event.error === 'network') {
+      // Network error — Google servers unreachable, retry with backoff
+      networkRetryCount++;
+      if (networkRetryCount <= MAX_NETWORK_RETRIES) {
+        const delay = networkRetryCount * 1500; // 1.5s, 3s, 4.5s
+        addMessage('system', `Network connection issue. Retrying (${networkRetryCount}/${MAX_NETWORK_RETRIES}) in ${Math.round(delay/1000)}s...`);
+        setTimeout(() => {
+          if (isRecording) {
+            try {
+              recognition = null;
+              createRecognition();
+            } catch(e) {
+              handleNetworkFailure();
+            }
+          }
+        }, delay);
+      } else {
+        handleNetworkFailure();
+      }
+    } else if (event.error === 'no-speech') {
+      // No speech detected, but don't show error yet — onend will handle it
+    } else if (event.error !== 'aborted') {
+      addMessage('system', 'Speech recognition error: ' + event.error + '. You can switch to text input mode below.');
+      isRecording = false;
+      resetRecordingUI();
+    }
+  };
+
+  recognition.onend = () => {
+    // If user manually stopped → process answer after a short delay
+    if (manualStop) {
+      manualStop = false;
+      setTimeout(() => {
+        if (currentTranscript.trim()) {
+          processAnswer(currentTranscript.trim(), currentConfidenceScores);
+        } else {
+          addMessage('system', 'No speech detected. Please try again, or switch to text input mode.');
+          document.getElementById('btnRecord').disabled = false;
+        }
+        document.getElementById('liveTranscript').className = 'live-transcript';
+      }, 400);
+      return;
+    }
+
+    // If recognition ended on its own (silence) and user didn't stop it:
+    if (currentTranscript.trim()) {
+      // User spoke and paused → process the answer
+      isRecording = false;
+      stopAudioRecording();
+      resetRecordingUI();
+      processAnswer(currentTranscript.trim(), currentConfidenceScores);
+      document.getElementById('liveTranscript').className = 'live-transcript';
+    } else if (isRecording) {
+      // No speech yet, restart recognition
+      try { recognition.start(); } catch(e) {
+        isRecording = false;
+        stopAudioRecording();
+        resetRecordingUI();
+      }
+    }
+  };
+
+  try {
+    recognition.start();
+    isRecording = true;
+    manualStop = false;
+    document.getElementById('btnRecord').textContent = '⏹️ Stop';
+    document.getElementById('btnRecord').className = 'btn-record recording';
+    document.getElementById('recordingIndicator').className = 'recording-indicator active';
+    document.getElementById('liveTranscript').className = 'live-transcript active';
+    document.getElementById('liveTranscript').textContent = '🎤 Listening...';
+  } catch(e) {
+    addMessage('system', 'Failed to start speech recognition. Please check your microphone, or switch to text input mode.');
+  }
+}
+
+function handleNetworkFailure() {
+  isRecording = false;
+  stopAudioRecording();
+  resetRecordingUI();
+  addMessage('system', 'Voice recognition cannot connect to the server. This may be due to network issues or firewall restrictions. You can: (1) Check your internet connection and try again, or (2) Switch to text input mode below to type your answers.');
+  // Auto-switch to text mode
+  inputMode = 'text';
+  updateInputModeUI();
+}
+
+function stopRecording() {
+  manualStop = true;
+  isRecording = false;
+  if (recognition) {
+    try { recognition.stop(); } catch(e) {}
+  }
+  stopAudioRecording();
+  resetRecordingUI();
+}
+
+function resetRecordingUI() {
+  document.getElementById('btnRecord').textContent = '🎙️ Answer';
+  document.getElementById('btnRecord').className = 'btn-record';
+  document.getElementById('recordingIndicator').className = 'recording-indicator';
+}
+
+// ===== AUDIO RECORDING (MediaRecorder) =====
+async function startAudioRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunks.push(event.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      // Release microphone
+      stream.getTracks().forEach(track => track.stop());
+      // Build audio blob
+      lastRecordingBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      if (lastRecordingURL) URL.revokeObjectURL(lastRecordingURL);
+      lastRecordingURL = URL.createObjectURL(lastRecordingBlob);
+    };
+
+    mediaRecorder.start();
+  } catch(e) {
+    console.warn('MediaRecorder not available:', e);
+    mediaRecorder = null;
+  }
+}
+
+function stopAudioRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    try { mediaRecorder.stop(); } catch(e) {}
+  }
+  mediaRecorder = null;
+}
+
+function playbackRecording() {
+  if (!lastRecordingURL) {
+    addMessage('system', 'No recording available. This feature works only in voice mode.');
+    return;
+  }
+  // Stop any previous playback
+  if (playbackAudio) {
+    playbackAudio.pause();
+    playbackAudio = null;
+  }
+  playbackAudio = new Audio(lastRecordingURL);
+  playbackAudio.play().catch(e => {
+    addMessage('system', 'Unable to play recording. Please try again.');
+  });
+}
+
+function cleanupRecording() {
+  if (playbackAudio) {
+    playbackAudio.pause();
+    playbackAudio = null;
+  }
+  if (lastRecordingURL) {
+    URL.revokeObjectURL(lastRecordingURL);
+    lastRecordingURL = null;
+  }
+  lastRecordingBlob = null;
+  audioChunks = [];
+}
+
+// ===== INPUT MODE TOGGLE =====
+function toggleInputMode() {
+  if (inputMode === 'voice') {
+    inputMode = 'text';
+    if (isRecording) stopRecording();
+  } else {
+    inputMode = 'voice';
+  }
+  updateInputModeUI();
+}
+
+function updateInputModeUI() {
+  const textArea = document.getElementById('textInputArea');
+  const btnRecord = document.getElementById('btnRecord');
+  const toggle = document.getElementById('modeToggle');
+  const liveEl = document.getElementById('liveTranscript');
+
+  if (inputMode === 'text') {
+    textArea.className = 'text-input-area visible';
+    btnRecord.style.display = 'none';
+    toggle.innerHTML = '<a onclick="toggleInputMode()">Switch to voice input</a>';
+    liveEl.className = 'live-transcript';
+    document.getElementById('textInput').focus();
+  } else {
+    textArea.className = 'text-input-area';
+    btnRecord.style.display = 'flex';
+    toggle.innerHTML = '<a onclick="toggleInputMode()">Switch to text input</a>';
+  }
+}
+
+function submitTextAnswer() {
+  const input = document.getElementById('textInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  // For text input, we don't have confidence scores, so pass empty array
+  processAnswer(text, []);
+}
+
+// ===== ANSWER PROCESSING & SCORING =====
+function processAnswer(transcript, confidenceScores) {
+  addMessage('user', '"' + transcript + '"');
+
+  const q = questions[currentQuestion];
+  const result = scoreAnswer(transcript, q, confidenceScores);
+
+  lastScore = result.total;
+  hasAnswered = true;
+
+  // Display scores
+  let scoreHtml = '<div class="score-display">';
+  scoreHtml += `<div class="score-item"><div class="label">Content Accuracy</div><div class="value ${getScoreClass(result.accuracy)}">${result.accuracy}</div></div>`;
+  scoreHtml += `<div class="score-item"><div class="label">Pronunciation</div><div class="value ${getScoreClass(result.pronunciation)}">${result.pronunciation}</div></div>`;
+  scoreHtml += `<div class="score-item"><div class="label">Fluency</div><div class="value ${getScoreClass(result.fluency)}">${result.fluency}</div></div>`;
+  scoreHtml += '</div>';
+  scoreHtml += `<div class="score-total ${result.total >= 60 ? 'pass' : 'fail'}">Total Score: ${result.total} / 100 ${result.total >= 60 ? '✅ PASSED' : '❌ Need more practice'}</div>`;
+
+  addMessage('system', scoreHtml);
+
+  // Update UI based on score
+  if (result.total >= 60) {
+    addMessage('app', 'Great job! You scored 60 or above. You can proceed to the next question!');
+    document.getElementById('btnNext').style.display = 'flex';
+    document.getElementById('btnRetry').style.display = 'none';
+    document.getElementById('btnRecord').disabled = true;
+  } else {
+    addMessage('app', 'You scored below 60. Would you like to see the reference answer, or try answering again?');
+    document.getElementById('btnReference').disabled = false;
+    document.getElementById('btnRetry').style.display = 'flex';
+    document.getElementById('btnRecord').disabled = false;
+  }
+
+  // Show playback button if audio was recorded (voice mode)
+  if (lastRecordingBlob) {
+    document.getElementById('btnPlayback').style.display = 'flex';
+  } else {
+    document.getElementById('btnPlayback').style.display = 'none';
+  }
+
+  // Speak feedback
+  if (result.total >= 60) {
+    speakText('Great job! You passed. You can proceed to the next question.');
+  } else {
+    speakText('You scored below 60. You can try again or check the reference answer.');
+  }
+
+  // Scroll to bottom
+  scrollToBottom();
+}
+
+function scoreAnswer(transcript, question, confidenceScores) {
+  const lowerTranscript = transcript.toLowerCase();
+  const words = lowerTranscript.split(/\s+/).filter(w => w.length > 0);
+
+  // 1. Content Accuracy (0-100)
+  let matchedKeywords = 0;
+  const totalKeywords = question.keywords.length;
+  const matchedKeywordList = [];
+
+  question.keywords.forEach(keyword => {
+    const lowerKeyword = keyword.toLowerCase();
+    // Check if keyword phrase or key parts appear
+    const keywordParts = lowerKeyword.split(/\s+/);
+    let partsFound = 0;
+    keywordParts.forEach(part => {
+      if (part.length > 2 && lowerTranscript.includes(part)) {
+        partsFound++;
+      } else if (part.length <= 2) {
+        partsFound++; // short words like "two" are easy, count as found
+      }
+    });
+    if (partsFound >= Math.ceil(keywordParts.length * 0.5)) {
+      matchedKeywords++;
+      matchedKeywordList.push(keyword);
+    }
+  });
+
+  const keywordRatio = totalKeywords > 0 ? matchedKeywords / totalKeywords : 0;
+  let accuracy = Math.round(keywordRatio * 70 + 20); // Base 20, max 90 from keywords, +10 for completeness
+  if (matchedKeywords >= totalKeywords * 0.8) accuracy = Math.min(100, accuracy + 10);
+  accuracy = Math.max(10, Math.min(100, accuracy));
+
+  // 2. Pronunciation (0-100)
+  // Chrome's speech recognition confidence is NOT a direct measure of pronunciation.
+  // Typical confidence values range from 0.2 to 0.8, so raw * 100 would be 20-80.
+  // We use a more generous mapping: confidence is one factor, but if the speech
+  // was successfully recognized as English words, that itself proves decent pronunciation.
+  let pronunciation = 70; // baseline: if recognized as English, pronunciation is at least decent
+  if (confidenceScores && confidenceScores.length > 0) {
+    const avgConfidence = confidenceScores.reduce((a, b) => a + b, 0) / confidenceScores.length;
+    // Map confidence (0~1) to a bonus range of 0~25
+    // So even low confidence (0.2) still gives a bonus of 5, high confidence (0.9) gives ~22
+    const confidenceBonus = Math.round(avgConfidence * 25);
+    // Word count bonus: more words recognized = more evidence of clear pronunciation
+    const wordBonus = Math.min(words.length * 0.5, 5);
+    pronunciation = Math.round(70 + confidenceBonus + wordBonus);
+  }
+  pronunciation = Math.max(50, Math.min(100, pronunciation));
+
+  // 3. Fluency (0-100) - based on word count, response completeness, and confidence
+  let fluency = 50;
+  const wordCount = words.length;
+  const refWordCount = question.referenceAnswer.split(/\s+/).length;
+
+  // Word count factor
+  const lengthRatio = Math.min(wordCount / refWordCount, 1.5);
+  const lengthScore = Math.min(lengthRatio * 70, 70);
+
+  // Minimum words check
+  const minWordsScore = wordCount >= 10 ? 20 : wordCount >= 5 ? 10 : 5;
+
+  // Confidence factor
+  const confFactor = confidenceScores && confidenceScores.length > 0
+    ? (confidenceScores.reduce((a, b) => a + b, 0) / confidenceScores.length) * 10
+    : 5;
+
+  fluency = Math.round(lengthScore + minWordsScore + confFactor);
+  fluency = Math.max(10, Math.min(100, fluency));
+
+  // Total score (weighted average)
+  const total = Math.round(accuracy * 0.4 + pronunciation * 0.3 + fluency * 0.3);
+
+  return { accuracy, pronunciation, fluency, total, matchedKeywords, totalKeywords };
+}
+
+function getScoreClass(score) {
+  if (score >= 70) return 'good';
+  if (score >= 40) return 'ok';
+  return 'bad';
+}
+
+// ===== REFERENCE ANSWER =====
+function showReference() {
+  const q = questions[currentQuestion];
+  addMessage('reference', `<strong>📋 Reference Answer:</strong><br><br>${q.referenceAnswer}`);
+  hasShownReference = true;
+  document.getElementById('btnReference').disabled = true;
+  document.getElementById('btnRetry').style.display = 'flex';
+  document.getElementById('btnRecord').disabled = false;
+
+  speakText('Here is the reference answer. ' + q.referenceAnswer);
+  scrollToBottom();
+}
+
+// ===== RETRY ANSWER =====
+function retryAnswer() {
+  currentTranscript = '';
+  currentConfidenceScores = [];
+  addMessage('app', 'Please try answering again. Speak clearly and include as many key points as you can!');
+  document.getElementById('btnRetry').style.display = 'none';
+  document.getElementById('btnPlayback').style.display = 'none';
+  document.getElementById('btnRecord').disabled = false;
+  document.getElementById('liveTranscript').className = 'live-transcript';
+  document.getElementById('liveTranscript').textContent = '';
+  document.getElementById('textInput').value = '';
+  cleanupRecording();
+  if (inputMode === 'text') {
+    document.getElementById('textInput').focus();
+  }
+  scrollToBottom();
+}
+
+// ===== NEXT QUESTION =====
+function nextQuestion() {
+  scores.push(lastScore);
+  currentQuestion++;
+
+  if (currentQuestion >= questions.length) {
+    showCompletion();
+  } else {
+    loadQuestion();
+  }
+}
+
+// ===== COMPLETION =====
+function showCompletion() {
+  document.getElementById('practiceScreen').style.display = 'none';
+  document.getElementById('completionScreen').style.display = 'block';
+  document.getElementById('progressFill').style.width = '100%';
+
+  const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  document.getElementById('finalScore').textContent = `${avgScore} / 100`;
+
+  let message = '';
+  if (avgScore >= 90) message = 'Outstanding! You have excellent knowledge of DEPU!';
+  else if (avgScore >= 75) message = 'Very good! You know DEPU well!';
+  else if (avgScore >= 60) message = 'Good job! Keep practicing to improve further!';
+  else message = 'Keep practicing! Review the reference answers and try again.';
+  document.getElementById('finalMessage').textContent = message;
+
+  speakText('Congratulations! You have completed all questions. Your average score is ' + avgScore + ' out of 100.');
+}
+
+// ===== HELPER FUNCTIONS =====
+function addMessage(type, content) {
+  const chatArea = document.getElementById('chatArea');
+  const msg = document.createElement('div');
+  msg.className = `message ${type}`;
+  msg.innerHTML = content;
+  chatArea.appendChild(msg);
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const chatArea = document.getElementById('chatArea');
+  setTimeout(() => { chatArea.scrollTop = chatArea.scrollHeight; }, 100);
+}
+
+function speakText(text) {
+  if (!synth) return;
+  synth.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-US';
+  utterance.rate = 0.9;
+  const voices = synth.getVoices();
+  const enVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'))
+    || voices.find(v => v.lang.startsWith('en-US'))
+    || voices.find(v => v.lang.startsWith('en'));
+  if (enVoice) utterance.voice = enVoice;
+  synth.speak(utterance);
+}
+
+// Load voices
+if (synth) {
+  synth.onvoiceschanged = () => synth.getVoices();
+}
+</script>
+</body>
+</html>
