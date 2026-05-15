@@ -343,31 +343,14 @@ let lastRecordingURL = null;
 let lastRecordingBlob = null;
 let playbackAudio = null;
 
-// ===== PRE-WARM SPEECH RECOGNITION =====
-// Chrome's Web Speech API needs an initial connection to Google servers.
-// We pre-warm it on page load so it's ready when the user clicks Answer.
-function prewarmSpeechRecognition() {
+// ===== CHECK SPEECH RECOGNITION AVAILABILITY =====
+// Do NOT auto-start recognition on page load — that silently consumes
+// the microphone permission prompt. We only check availability here.
+function checkSpeechRecognitionAvailable() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    speechRecognitionAvailable = false;
-    return;
-  }
-  speechRecognitionAvailable = true;
-  try {
-    const warmup = new SpeechRecognition();
-    warmup.lang = 'en-US';
-    warmup.continuous = false;
-    warmup.interimResults = false;
-    warmup.onresult = () => {};
-    warmup.onerror = () => {};
-    warmup.onend = () => {};
-    warmup.start();
-    // Stop it immediately — we just want to trigger the network connection
-    setTimeout(() => { try { warmup.stop(); } catch(e) {} }, 200);
-  } catch(e) {}
+  speechRecognitionAvailable = !!SpeechRecognition;
 }
-// Pre-warm on page load
-prewarmSpeechRecognition();
+checkSpeechRecognitionAvailable();
 
 // ===== INITIALIZATION =====
 function startApp() {
@@ -379,8 +362,6 @@ function startApp() {
   document.getElementById('practiceScreen').style.display = 'block';
   updateInputModeUI();
   loadQuestion();
-  // Pre-warm again when starting
-  prewarmSpeechRecognition();
 }
 
 function loadQuestion() {
@@ -444,10 +425,20 @@ function toggleRecording() {
   }
 }
 
-function startRecording() {
+async function startRecording() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     addMessage('system', 'Your browser does not support speech recognition. Please use Chrome browser, or switch to text input mode.');
+    return;
+  }
+
+  // Explicitly request microphone permission first — this triggers the browser prompt
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Permission granted — release the stream (we'll re-acquire in MediaRecorder)
+    stream.getTracks().forEach(track => track.stop());
+  } catch(e) {
+    addMessage('system', 'Microphone access was denied. Please click the lock/icon in your browser address bar, allow microphone access, then reload the page and try again. You can also switch to text input mode below.');
     return;
   }
 
