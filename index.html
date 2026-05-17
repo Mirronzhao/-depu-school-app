@@ -189,6 +189,32 @@
     margin: 20px 0; text-shadow: 0 0 30px rgba(233,69,96,0.5);
   }
   .tips { font-size: 0.85em; color: #a0a0b0; margin-top: 10px; font-style: italic; }
+  .browser-tip {
+    background: rgba(243,156,18,0.15); border: 1px solid rgba(243,156,18,0.4);
+    border-radius: 10px; padding: 12px 16px; margin: 15px 0;
+    color: #f0d060; font-size: 0.9em; line-height: 1.6;
+  }
+  .mode-badge {
+    display: inline-block; padding: 4px 12px; border-radius: 12px;
+    font-size: 0.8em; font-weight: 600; margin-top: 8px;
+  }
+  .mode-badge.voice { background: rgba(233,69,96,0.2); color: #ff6b6b; }
+  .mode-badge.text { background: rgba(52,152,219,0.2); color: #5dade2; }
+  /* Mobile optimizations */
+  @media (max-width: 600px) {
+    .app-container { padding: 10px; }
+    header { padding: 15px 0 10px; }
+    header h1 { font-size: 1.3em; }
+    .chat-area { min-height: 200px; max-height: 350px; padding: 10px; }
+    .message { padding: 10px 14px; font-size: 0.95em; }
+    .score-item { min-width: 80px; padding: 8px 12px; }
+    .score-item .value { font-size: 1.4em; }
+    button { padding: 10px 16px; font-size: 0.9em; }
+    .btn-start { padding: 14px 30px; font-size: 1.1em; }
+    .text-input-area input { font-size: 16px; /* prevents iOS zoom */ }
+    .welcome ul { font-size: 0.95em; }
+    .welcome h2 { font-size: 1.2em; }
+  }
 </style>
 </head>
 <body>
@@ -203,15 +229,15 @@
     <p>Practice speaking about Chongqing DEPU Foreign Language School</p>
     <ul>
       <li>The app will ask you questions in English</li>
-      <li>Answer each question by speaking in English</li>
+      <li>Answer each question in English (by voice or by typing)</li>
       <li>You will be scored on: Accuracy, Pronunciation & Fluency</li>
       <li>Score 60+ to advance to the next question</li>
       <li>Request a reference answer if you need help</li>
       <li>You can re-answer after seeing the reference</li>
     </ul>
+    <div id="welcomeBrowserTip"></div>
     <br>
     <button class="btn-start" onclick="startApp()">Start Practice</button>
-    <div class="tips">Please use Chrome browser for best speech recognition support</div>
   </div>
 
   <div id="practiceScreen" style="display:none">
@@ -349,6 +375,14 @@ let playbackAudio = null;
 function checkSpeechRecognitionAvailable() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   speechRecognitionAvailable = !!SpeechRecognition;
+
+  // Show browser tip on welcome screen
+  const tipEl = document.getElementById('welcomeBrowserTip');
+  if (speechRecognitionAvailable) {
+    tipEl.innerHTML = '<div class="browser-tip">Voice input is supported in your browser. You can speak or type your answers.<br><span class="mode-badge voice">Voice + Text</span></div>';
+  } else {
+    tipEl.innerHTML = '<div class="browser-tip">Your browser does not support voice input. You can type your answers instead.<br>For voice input, please use Chrome browser on your phone or PC.<br><span class="mode-badge text">Text Only</span></div>';
+  }
 }
 checkSpeechRecognitionAvailable();
 
@@ -356,7 +390,8 @@ checkSpeechRecognitionAvailable();
 function startApp() {
   currentQuestion = 0;
   scores = [];
-  inputMode = 'voice';
+  // Auto-detect: use text mode if speech recognition is not available
+  inputMode = speechRecognitionAvailable ? 'voice' : 'text';
   document.getElementById('welcomeScreen').style.display = 'none';
   document.getElementById('completionScreen').style.display = 'none';
   document.getElementById('practiceScreen').style.display = 'block';
@@ -678,7 +713,11 @@ function updateInputModeUI() {
   if (inputMode === 'text') {
     textArea.className = 'text-input-area visible';
     btnRecord.style.display = 'none';
-    toggle.innerHTML = '<a onclick="toggleInputMode()">Switch to voice input</a>';
+    if (speechRecognitionAvailable) {
+      toggle.innerHTML = '<a onclick="toggleInputMode()">Switch to voice input</a>';
+    } else {
+      toggle.innerHTML = '<span style="color:#a0a0b0;font-size:0.85em;">Text input mode (install Chrome for voice input)</span>';
+    }
     liveEl.className = 'live-transcript';
     document.getElementById('textInput').focus();
   } else {
@@ -846,7 +885,7 @@ function showReference() {
 function retryAnswer() {
   currentTranscript = '';
   currentConfidenceScores = [];
-  addMessage('app', 'Please try answering again. Speak clearly and include as many key points as you can!');
+  addMessage('app', 'Please try answering again. Include as many key points as you can!');
   document.getElementById('btnRetry').style.display = 'none';
   document.getElementById('btnPlayback').style.display = 'none';
   document.getElementById('btnRecord').disabled = false;
