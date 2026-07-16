@@ -2,17 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>DEPU School - English Oral Practice</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     min-height: 100vh; color: #e0e0e0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
+  button, a, input { touch-action: manipulation; }
   .app-container {
-    max-width: 800px; margin: 0 auto; padding: 20px;
+    max-width: 800px; margin: 0 auto;
+    padding: 20px;
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
     min-height: 100vh; display: flex; flex-direction: column;
   }
   header {
@@ -42,7 +52,7 @@
   .chat-area {
     flex: 1; overflow-y: auto; padding: 12px;
     background: rgba(255,255,255,0.05); border-radius: 15px;
-    margin-bottom: 10px; min-height: 250px; max-height: 450px;
+    margin-bottom: 10px; min-height: 250px; max-height: min(450px, 55vh);
   }
   .message {
     margin-bottom: 12px; padding: 10px 16px;
@@ -95,7 +105,8 @@
   button {
     padding: 10px 20px; border: none; border-radius: 25px;
     font-size: 0.9em; cursor: pointer; transition: all 0.3s ease;
-    font-weight: 600; display: flex; align-items: center; gap: 6px;
+    font-weight: 600; display: flex; align-items: center; justify-content: center;
+    gap: 6px; min-height: 44px;
   }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn-record {
@@ -383,17 +394,68 @@
 
   /* Mobile optimizations */
   @media (max-width: 600px) {
-    .app-container { padding: 10px; }
+    .app-container {
+      padding: 10px;
+      padding-left: max(10px, env(safe-area-inset-left));
+      padding-right: max(10px, env(safe-area-inset-right));
+    }
+    .login-screen { padding: 20px 10px; }
+    .login-screen h2 { font-size: 1.5em; }
+    .login-form { padding: 0; max-width: 100%; }
     header h1 { font-size: 1.2em; }
-    .chat-area { min-height: 200px; max-height: 300px; padding: 8px; }
-    .message { padding: 8px 12px; font-size: 0.9em; }
-    .score-item { min-width: 70px; padding: 6px 10px; }
-    .score-item .value { font-size: 1.3em; }
-    button { padding: 8px 14px; font-size: 0.85em; }
-    .btn-start { padding: 12px 25px; font-size: 1em; }
-    .ai-chat-panel { width: calc(100% - 20px); right: 10px; bottom: 65px; max-height: 400px; }
-    .btn-chat-toggle { bottom: 15px; right: 15px; }
-    .login-form { padding: 0 10px; }
+    .nav-tabs { margin-bottom: 10px; }
+    .nav-tab { padding: 12px 6px; font-size: 0.85em; }
+    .category-filter { gap: 4px; }
+    .cat-btn { padding: 5px 8px; font-size: 0.7em; }
+    .progress-text { font-size: 0.8em; }
+    .chat-area { min-height: 180px; max-height: 45vh; padding: 8px; }
+    .message { padding: 8px 12px; font-size: 0.9em; max-width: 92%; }
+    .score-display {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .score-item { min-width: auto; padding: 8px 4px; }
+    .score-item .label { font-size: 0.7em; }
+    .score-item .value { font-size: 1.25em; }
+    .score-total { font-size: 1.05em; }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      padding: 8px 0;
+    }
+    .controls button {
+      width: 100%;
+      padding: 12px 6px;
+      font-size: 0.8em;
+      min-height: 48px;
+    }
+    #btnSubmitExam { grid-column: span 2; }
+    .btn-start { padding: 14px 24px; font-size: 1em; }
+    .text-input-area.visible { gap: 6px; }
+    .text-input-area input { padding: 12px 14px; font-size: 16px; }
+    .btn-text-submit { padding: 12px 14px; }
+    .welcome h2 { font-size: 1.25em; }
+    .welcome ul { font-size: 0.9em; }
+    .completion h2 { font-size: 1.3em; }
+    .completion .final-score { font-size: 2em; }
+    .ai-chat-panel {
+      width: calc(100% - 20px);
+      right: 10px;
+      bottom: max(65px, calc(10px + env(safe-area-inset-bottom)));
+      max-height: calc(100vh - 100px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    }
+    .btn-chat-toggle {
+      bottom: max(15px, env(safe-area-inset-bottom));
+      right: 15px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .controls { grid-template-columns: 1fr; }
+    #btnSubmitExam { grid-column: span 1; }
+    .score-display { grid-template-columns: 1fr; }
   }
 </style>
 </head>
