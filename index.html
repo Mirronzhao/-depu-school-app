@@ -673,8 +673,13 @@ function checkSpeechRecognitionAvailable() {
     if (speechRecognitionAvailable) {
       tipEl.innerHTML = '<div class="browser-tip">Voice input is supported in your browser.<br><span class="mode-badge voice">Voice + Text</span></div>';
     } else {
-      tipEl.innerHTML = '<div class="browser-tip">Your browser does not support voice input. You can type your answers instead.<br>For voice input, use Chrome browser.<br><span class="mode-badge text">Text Only</span></div>';
+      tipEl.innerHTML = '<div class="browser-tip"><strong>Voice input is not supported in this browser.</strong><br>Please type your answers below, or use Chrome / Samsung Internet on Android for voice input.<br><span class="mode-badge text">Text Only</span></div>';
     }
+  }
+  // iOS Safari and many mobile browsers do not support Web Speech API.
+  // Force text mode early so the user always has a working input method.
+  if (!speechRecognitionAvailable) {
+    inputMode = 'text';
   }
 }
 
@@ -853,7 +858,8 @@ function loadQuestion() {
   btnRecord.textContent = 'Answer';
   btnRecord.className = 'btn-record';
   document.getElementById('btnReference').disabled = hasAnswered;
-  document.getElementById('btnRetry').style.display = hasAnswered ? 'none' : 'none';
+  // Always show Retry for questions that have already been answered
+  document.getElementById('btnRetry').style.display = hasAnswered ? 'flex' : 'none';
   document.getElementById('btnNext').style.display = currentQuestion < total - 1 && hasAnswered ? 'flex' : 'none';
   document.getElementById('btnPrev').style.display = currentQuestion > 0 ? 'flex' : 'none';
   document.getElementById('btnPlayback').style.display = 'none';
@@ -874,7 +880,12 @@ function loadQuestion() {
     }
   }
 
-  setTimeout(() => speakQuestion(), 500);
+  // Mobile browsers block autoplay audio. Ask the user to tap Listen explicitly.
+  if (speechRecognitionAvailable) {
+    addMessage('system', 'Tap 🔊 <strong>Listen</strong> to hear the question. Tap 🎙️ <strong>Answer</strong> to speak, or type your answer below.');
+  } else {
+    addMessage('system', 'Tap 🔊 <strong>Listen</strong> to hear the question. Your browser does not support voice input, so please type your answer below.');
+  }
 }
 
 // ===== PREVIOUS QUESTION =====
@@ -888,7 +899,14 @@ function previousQuestion() {
 // ===== SPEECH SYNTHESIS =====
 function speakQuestion() {
   if (!synth) return;
-  synth.cancel();
+  // On mobile browsers the audio context may be suspended until a user gesture.
+  if (typeof AudioContext !== 'undefined') {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+  }
+  if (synth.speaking) synth.cancel();
+  if (synth.paused) synth.resume();
+
   const q = filteredQuestions[currentQuestion];
   const utterance = new SpeechSynthesisUtterance(q.question);
   utterance.lang = 'en-US';
@@ -907,6 +925,12 @@ function toggleRecording() {
 }
 
 async function startRecording() {
+  if (!speechRecognitionAvailable) {
+    addMessage('system', 'Voice input is not available in this browser. Please type your answer below.');
+    inputMode = 'text';
+    updateInputModeUI();
+    return;
+  }
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     addMessage('system', 'Speech recognition not supported. Please use Chrome or switch to text input.');
@@ -1106,14 +1130,16 @@ function processAnswer(transcript, confidenceScores) {
   addMessage('system', scoreHtml);
 
   if (result.total >= 60) {
-    addMessage('app', 'Great job! You can proceed to the next question, or check the reference answer.');
+    addMessage('app', 'Great job! You can proceed to the next question, try again for a better score, or check the reference answer.');
     if (currentQuestion < filteredQuestions.length - 1) {
       document.getElementById('btnNext').style.display = 'flex';
     }
   } else {
     addMessage('app', 'You scored below 60. Would you like to see the reference answer, or try again?');
-    document.getElementById('btnRetry').style.display = 'flex';
   }
+
+  // Always allow re-answering, even after passing
+  document.getElementById('btnRetry').style.display = 'flex';
 
   // Feature 1: Always show reference answer button after answering
   document.getElementById('btnReference').disabled = false;
@@ -1358,7 +1384,12 @@ function scrollToBottom() {
 
 function speakText(text) {
   if (!synth) return;
-  synth.cancel();
+  if (typeof AudioContext !== 'undefined') {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+  }
+  if (synth.speaking) synth.cancel();
+  if (synth.paused) synth.resume();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'en-US';
   utterance.rate = 0.9;
