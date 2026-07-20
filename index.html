@@ -665,6 +665,16 @@ let lastRecordingBlob = null;
 let playbackAudio = null;
 
 // ===== CHECK SPEECH RECOGNITION =====
+function getBrowserVoiceTip() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  const isAndroid = /Android/.test(ua);
+  const isChrome = /Chrome/.test(ua) && !/Edg|OPR|SamsungBrowser|QQ|MicroMessenger/.test(ua);
+  if (isIOS) return 'Tip: iPhone browsers currently do not support web voice input. Please type your answer.';
+  if (isAndroid && !isChrome) return 'Tip: For voice input, please open this page in Chrome browser. You can still type your answer now.';
+  return '';
+}
+
 function checkSpeechRecognitionAvailable() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   speechRecognitionAvailable = !!SpeechRecognition;
@@ -673,7 +683,8 @@ function checkSpeechRecognitionAvailable() {
     if (speechRecognitionAvailable) {
       tipEl.innerHTML = '<div class="browser-tip">Voice input is supported in your browser.<br><span class="mode-badge voice">Voice + Text</span></div>';
     } else {
-      tipEl.innerHTML = '<div class="browser-tip"><strong>Voice input is not supported in this browser.</strong><br>Please type your answers below, or use Chrome / Samsung Internet on Android for voice input.<br><span class="mode-badge text">Text Only</span></div>';
+      const browserTip = getBrowserVoiceTip();
+      tipEl.innerHTML = '<div class="browser-tip"><strong>Voice input is not supported in this browser.</strong><br>' + (browserTip ? browserTip + '<br>' : '') + 'Please type your answers below, or use Chrome / Samsung Internet on Android for voice input.<br><span class="mode-badge text">Text Only</span></div>';
     }
   }
   // iOS Safari and many mobile browsers do not support Web Speech API.
@@ -788,6 +799,8 @@ function startApp() {
   scores = [];
   answeredQuestions.clear();
   inputMode = speechRecognitionAvailable ? 'voice' : 'text';
+  // Unlock mobile audio on the user gesture that started the app.
+  unlockAudio();
   document.getElementById('welcomeScreen').style.display = 'none';
   document.getElementById('completionScreen').style.display = 'none';
   document.getElementById('practiceScreen').style.display = 'block';
@@ -881,10 +894,11 @@ function loadQuestion() {
   }
 
   // Mobile browsers block autoplay audio. Ask the user to tap Listen explicitly.
+  const browserTip = getBrowserVoiceTip();
   if (speechRecognitionAvailable) {
     addMessage('system', 'Tap 🔊 <strong>Listen</strong> to hear the question. Tap 🎙️ <strong>Answer</strong> to speak, or type your answer below.');
   } else {
-    addMessage('system', 'Tap 🔊 <strong>Listen</strong> to hear the question. Your browser does not support voice input, so please type your answer below.');
+    addMessage('system', 'Tap 🔊 <strong>Listen</strong> to hear the question. Your browser does not support voice input, so please type your answer below.' + (browserTip ? '<br><span style="color:#f0d060;font-size:0.9em">' + browserTip + '</span>' : ''));
   }
 }
 
@@ -897,26 +911,68 @@ function previousQuestion() {
 }
 
 // ===== SPEECH SYNTHESIS =====
-function speakQuestion() {
-  if (!synth) return;
-  // On mobile browsers the audio context may be suspended until a user gesture.
-  if (typeof AudioContext !== 'undefined') {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
-  }
-  if (synth.speaking) synth.cancel();
-  if (synth.paused) synth.resume();
+// iOS/Android browsers require audio to be unlocked by a user gesture.
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  try {
+    // Play a silent sound to unlock the WebAudio/media playback on mobile.
+    const silent = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAAAAAA==');
+    silent.play().catch(() => {});
+  } catch (e) {}
+}
 
-  const q = filteredQuestions[currentQuestion];
-  const utterance = new SpeechSynthesisUtterance(q.question);
-  utterance.lang = 'en-US';
-  utterance.rate = 0.9;
-  const voices = synth.getVoices();
-  const enVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'))
-    || voices.find(v => v.lang.startsWith('en-US'))
-    || voices.find(v => v.lang.startsWith('en'));
-  if (enVoice) utterance.voice = enVoice;
-  synth.speak(utterance);
+function speakWithFallback(text) {
+  if (!window.speechSynthesis) {
+    addMessage('system', 'Text-to-speech is not supported in this browser.');
+    return;
+  }
+  // Must be called from a user gesture on mobile.
+  unlockAudio();
+
+  const doSpeak = () => {
+    try {
+      if (window.speechSynthesis.speaking || window.speechSynthesis.paused) {
+        window.speechSynthesis.cancel();
+      }
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      utterance.onerror = (e) => {
+        console.warn('TTS error:', e.error);
+      };
+      const voices = window.speechSynthesis.getVoices();
+      const enVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'))
+        || voices.find(v => v.lang.startsWith('en-US'))
+        || voices.find(v => v.lang.startsWith('en'));
+      if (enVoice) utterance.voice = enVoice;
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn('speechSynthesis.speak failed:', err);
+    }
+  };
+
+  // On some browsers (especially iOS) voices load asynchronously.
+  if (window.speechSynthesis.getVoices().length === 0 && 'onvoiceschanged' in window.speechSynthesis) {
+    const handler = () => {
+      window.speechSynthesis.onvoiceschanged = null;
+      doSpeak();
+    };
+    window.speechSynthesis.onvoiceschanged = handler;
+    // Fallback: speak with default voice if voices never load.
+    setTimeout(() => {
+      window.speechSynthesis.onvoiceschanged = null;
+      doSpeak();
+    }, 1000);
+  } else {
+    doSpeak();
+  }
+}
+
+function speakQuestion() {
+  if (!filteredQuestions[currentQuestion]) return;
+  speakWithFallback(filteredQuestions[currentQuestion].question);
 }
 
 // ===== SPEECH RECOGNITION =====
@@ -933,22 +989,33 @@ async function startRecording() {
   }
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    addMessage('system', 'Speech recognition not supported. Please use Chrome or switch to text input.');
+    addMessage('system', 'Speech recognition is not supported. Please use Chrome on Android or type your answer.');
     return;
   }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach(track => track.stop());
-  } catch(e) {
-    addMessage('system', 'Microphone access denied. Allow microphone access and try again, or switch to text input.');
-    return;
-  }
+
+  // Reset state
   currentTranscript = '';
   currentConfidenceScores = [];
   manualStop = false;
   networkRetryCount = 0;
   audioChunks = [];
-  startAudioRecording();
+  cleanupRecording();
+  unlockAudio();
+
+  // Give immediate visual feedback while waiting for microphone permission
+  const liveEl = document.getElementById('liveTranscript');
+  liveEl.textContent = '🎙️ Requesting microphone permission...';
+  liveEl.className = 'live-transcript active';
+
+  try {
+    await startAudioRecording();
+  } catch (e) {
+    liveEl.textContent = '';
+    liveEl.className = 'live-transcript';
+    addMessage('system', 'Microphone access denied or unavailable. Please allow microphone access in your browser settings, or type your answer below.');
+    return;
+  }
+
   createRecognition();
 }
 
@@ -1019,9 +1086,12 @@ function createRecognition() {
     document.getElementById('btnRecord').className = 'btn-record recording';
     document.getElementById('recordingIndicator').className = 'recording-indicator active';
     document.getElementById('liveTranscript').className = 'live-transcript active';
-    document.getElementById('liveTranscript').textContent = 'Listening...';
+    document.getElementById('liveTranscript').textContent = 'Listening... Speak now!';
   } catch(e) {
-    addMessage('system', 'Failed to start speech recognition. Switch to text input.');
+    stopAudioRecording();
+    resetRecordingUI();
+    addMessage('system', 'Failed to start speech recognition: ' + (e.message || e) + '. Please type your answer below.');
+    console.warn('recognition.start error:', e);
   }
 }
 
@@ -1045,19 +1115,31 @@ function resetRecordingUI() {
 
 // ===== AUDIO RECORDING =====
 async function startAudioRecording() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    audioChunks = [];
-    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
-    mediaRecorder.onstop = () => {
-      stream.getTracks().forEach(t => t.stop());
-      lastRecordingBlob = new Blob(audioChunks, { type: 'audio/webm' });
-      if (lastRecordingURL) URL.revokeObjectURL(lastRecordingURL);
-      lastRecordingURL = URL.createObjectURL(lastRecordingBlob);
-    };
-    mediaRecorder.start();
-  } catch(e) { mediaRecorder = null; }
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  // Prefer a supported MIME type; webm is not available on iOS Safari.
+  const canRecord = typeof MediaRecorder.isTypeSupported === 'function';
+  const mimeType = canRecord && MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm'
+    : canRecord && MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4'
+    : canRecord && MediaRecorder.isTypeSupported('audio/aac') ? 'audio/aac'
+    : '';
+  mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+  audioChunks = [];
+  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+  mediaRecorder.onstop = () => {
+    stream.getTracks().forEach(t => t.stop());
+    if (audioChunks.length === 0) {
+      lastRecordingBlob = null;
+      return;
+    }
+    const blobType = mimeType || 'audio/webm';
+    lastRecordingBlob = new Blob(audioChunks, { type: blobType });
+    if (lastRecordingURL) URL.revokeObjectURL(lastRecordingURL);
+    lastRecordingURL = URL.createObjectURL(lastRecordingBlob);
+  };
+  mediaRecorder.onerror = (e) => {
+    console.warn('MediaRecorder error:', e);
+  };
+  mediaRecorder.start();
 }
 
 function stopAudioRecording() {
@@ -1383,25 +1465,8 @@ function scrollToBottom() {
 }
 
 function speakText(text) {
-  if (!synth) return;
-  if (typeof AudioContext !== 'undefined') {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
-  }
-  if (synth.speaking) synth.cancel();
-  if (synth.paused) synth.resume();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'en-US';
-  utterance.rate = 0.9;
-  const voices = synth.getVoices();
-  const enVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Female'))
-    || voices.find(v => v.lang.startsWith('en-US'))
-    || voices.find(v => v.lang.startsWith('en'));
-  if (enVoice) utterance.voice = enVoice;
-  synth.speak(utterance);
+  speakWithFallback(text);
 }
-
-if (synth) synth.onvoiceschanged = () => synth.getVoices();
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
